@@ -1,0 +1,14 @@
+services:
+  suggest-be:
+    build: .
+    container_name: prooflift-suggest-be
+    ports:
+      - "8082:8080"
+    environment:
+      # Rellena estos en tu .env (no comprometas credenciales)
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_DB=${MONGO_DB:-prooflift-suggest-db}
+      - FE_ORIGIN=${FE_ORIGIN:-http://localhost:5173}
+    env_file:
+      - .env
+    restart: unless-stopped
