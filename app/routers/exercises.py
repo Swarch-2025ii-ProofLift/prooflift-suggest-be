@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, Dict, Any, List
 from bson import ObjectId
+import re
 
 from ..db.mongo import get_db
 from ..models.exercise import (
@@ -53,7 +54,41 @@ def search_exercises(
         filt["muscles"] = muscle.strip().lower()
 
     if q:
-        filt["$text"] = {"$search": q}
+        # Búsqueda parcial con regex - permite "pr" -> "press", "cur" -> "curl", etc.
+        search_term = q.strip()
+        
+        # Escapar caracteres especiales de regex para seguridad
+        escaped_term = re.escape(search_term)
+        
+        # Crear patrones de búsqueda:
+        # 1. Al inicio de la palabra (^term)
+        # 2. Al inicio de cualquier palabra dentro del texto (\bterm)
+        filt["$or"] = [
+            {
+                "name": {
+                    "$regex": f"^{escaped_term}",
+                    "$options": "i"  # Case insensitive
+                }
+            },
+            {
+                "name": {
+                    "$regex": f"\\b{escaped_term}",
+                    "$options": "i"
+                }
+            },
+            {
+                "synonyms": {
+                    "$regex": f"^{escaped_term}",
+                    "$options": "i"
+                }
+            },
+            {
+                "synonyms": {
+                    "$regex": f"\\b{escaped_term}",
+                    "$options": "i"
+                }
+            }
+        ]
 
     if cursor:
         try:
