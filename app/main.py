@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pymongo import MongoClient, ASCENDING, DESCENDING, TEXT
 import os
 from dotenv import load_dotenv
 
@@ -8,26 +7,41 @@ load_dotenv()
 
 app = FastAPI(title="ProofLift Suggest API", version="0.1.0")
 
-# CORS: ajusta el origin a tu FE
+# CORS: ajustar para Docker y desarrollo
+allowed_origins = [
+    os.getenv("FE_ORIGIN", "http://localhost:5173"),
+    "http://localhost:3000",  # Frontend en Docker
+    "http://localhost:5173",  # Frontend en desarrollo
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FE_ORIGIN","http://localhost:5173")],
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True, 
+    allow_methods=["*"], 
+    allow_headers=["*"],
 )
 
-client = MongoClient(os.getenv("MONGO_URI"))
-db = client[os.getenv("MONGO_DB","prooflift-suggest-db")]
-
-def ensure_indexes():
-    col = db.exercises
-    col.create_index([("muscles", ASCENDING)])
-    col.create_index([("goal_tags", ASCENDING)])
-    col.create_index([("created_at", DESCENDING)])
-    col.create_index([("name", TEXT), ("synonyms", TEXT)], name="ex_text")
-
 @app.on_event("startup")
-def on_startup():
-    ensure_indexes()
+async def startup_event():
+    # Inicializar conexión a MongoDB y crear índices
+    from .db.mongo import ensure_indexes
+    try:
+        ensure_indexes()
+        print("✅ Conectado a MongoDB en la nube")
+    except Exception as e:
+        print(f"❌ Error conectando a MongoDB: {e}")
 
 @app.get("/health")
-def health(): return {"status": "ok"}
+def health(): 
+    return {"status": "ok", "database": "cloud"}
+
+# Importar los routers
+from .routers import exercises
+app.include_router(exercises.router)
+
+# Para desarrollo local
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
