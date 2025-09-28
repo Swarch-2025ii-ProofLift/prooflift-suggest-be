@@ -7,11 +7,10 @@ load_dotenv()
 
 app = FastAPI(title="ProofLift Suggest API", version="0.1.0")
 
-# CORS: ajustar para Docker y desarrollo
 allowed_origins = [
     os.getenv("FE_ORIGIN", "http://localhost:5173"),
-    "http://localhost:3000",  # Frontend en Docker
-    "http://localhost:5173",  # Frontend en desarrollo
+    "http://localhost:3000",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -24,23 +23,20 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    # Inicializar conexión a MongoDB y crear índices
     from .db.mongo import ensure_indexes
     try:
         ensure_indexes()
-        print("✅ Conectado a MongoDB en la nube")
+        print("Conectado a MongoDB en la nube")
     except Exception as e:
-        print(f"❌ Error conectando a MongoDB: {e}")
+        print(f"Error conectando a MongoDB: {e}")
 
 @app.get("/health")
 def health(): 
     return {"status": "ok", "database": "cloud"}
 
-# Importar los routers
 from .routers import exercises
 app.include_router(exercises.router)
 
-# Para desarrollo local
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
