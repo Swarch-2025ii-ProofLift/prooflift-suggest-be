@@ -24,15 +24,17 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     from .db.mongo import ensure_indexes
+    from .db.seeds import run as run_seeds
     try:
         ensure_indexes()
-        print("Conectado a MongoDB en la nube")
+        run_seeds()
+        print("Conectado a MongoDB local")
     except Exception as e:
         print(f"Error conectando a MongoDB: {e}")
 
 @app.get("/health")
-def health(): 
-    return {"status": "ok", "database": "cloud"}
+def health():
+    return {"status": "ok", "database": "local"}
 
 from .routers import exercises
 app.include_router(exercises.router)

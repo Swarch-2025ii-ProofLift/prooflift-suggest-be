@@ -1,5 +1,5 @@
 from datetime import datetime
-from ..main import db
+from .mongo import get_db
 
 # 50 ejercicios con su grupo muscular principal
 BASE = [
@@ -78,6 +78,7 @@ def _with_media(b):
     }
 
 def run():
+    db = get_db()
     col = db.exercises
     if col.estimated_document_count() == 0:
         col.create_index([("group", 1)])
